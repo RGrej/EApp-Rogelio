@@ -11,9 +11,17 @@ import flet as ft
 import requests
 import json
 import os
-import tkinter as tk
-from tkinter import filedialog
-from datetime import datetime
+
+# ==========================================
+# 🛡️ ADAPTADOR DE ENTORNO (NUBE vs ESCRITORIO)
+# ==========================================
+try:
+    import tkinter as tk
+    from tkinter import filedialog
+    ENTORNO_ESCRITORIO = True
+except ImportError:
+    # Si estamos en Render (Linux sin pantalla), tkinter fallará.
+    ENTORNO_ESCRITORIO = False
 
 # ==========================================
 # ☁️ LLAVES DE LA BÓVEDA FIREBASE
@@ -25,7 +33,6 @@ DATABASE_URL = "https://eapp-rgrej-default-rtdb.firebaseio.com"
 # 📄 FÁBRICA DE PDF Y LIMPIEZA DE EMOJIS
 # ==========================================
 def limpiar_texto(texto):
-    # 'ignore' evapora los emojis en lugar de poner '?' 
     return str(texto).encode('latin-1', 'ignore').decode('latin-1').strip()
 
 try:
@@ -35,33 +42,29 @@ try:
             self.set_y(-15)
             self.set_font("Arial", "I", 10)
             self.set_text_color(128, 128, 128)
-            self.cell(0, 10, limpiar_texto("EApp 6.3 by Rogelio Grej - rogeliogrej@gmail.com"), align="C")
+            self.cell(0, 10, limpiar_texto("EApp 6.4 by Rogelio Grej - rogeliogrej@gmail.com"), align="C")
     PDF_DISPONIBLE = True
 except ImportError:
     PDF_DISPONIBLE = False
 
 def main(page: ft.Page):
     # --- CONFIGURACIÓN GENERAL ---
-    page.title = "EApp 6.3 by Rogelio Grej"
+    page.title = "EApp 6.4 by Rogelio Grej"
     page.theme_mode = "light"
     page.scroll = "adaptive"
     page.bgcolor = "#F8FAFC"
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
 
-    # ==========================================
-    # 🌐 MOTOR BILINGÜE Y ESTADO
-    # ==========================================
     LANG = ["ES"]
     USER_TOKEN = [""]
     USER_ID = [""]
     tareas = []
-    
     tarea_a_restaurar = [""]
 
     TXT = {
         "ES": {
-            "appbar": "EApp 6.3 by Rogelio Grej",
-            "login_title": "EApp 6.3 Cloud",
+            "appbar": "EApp 6.4 by Rogelio Grej",
+            "login_title": "EApp 6.4 Cloud",
             "login_sub": "Inicia sesión en tu bóveda en la nube",
             "correo": "Correo electrónico",
             "pass": "Contraseña",
@@ -98,8 +101,8 @@ def main(page: ft.Page):
             "new_task_btn": "➕ NUEVA TAREA"
         },
         "EN": {
-            "appbar": "EApp 6.3 by Rogelio Grej",
-            "login_title": "EApp 6.3 Cloud",
+            "appbar": "EApp 6.4 by Rogelio Grej",
+            "login_title": "EApp 6.4 Cloud",
             "login_sub": "Log in to your cloud vault",
             "correo": "Email Address",
             "pass": "Password",
@@ -137,12 +140,8 @@ def main(page: ft.Page):
         }
     }
 
-    # ==========================================
-    # 📝 VARIABLES GRÁFICAS DINÁMICAS
-    # ==========================================
-    lbl_appbar = ft.Text("EApp 6.3 by Rogelio Grej", weight="bold", color="#FFFFFF")
-    
-    lbl_login_title = ft.Text("EApp 6.3 Cloud", size=32, weight="extrabold", color="#1E293B")
+    lbl_appbar = ft.Text("EApp 6.4 by Rogelio Grej", weight="bold", color="#FFFFFF")
+    lbl_login_title = ft.Text("EApp 6.4 Cloud", size=32, weight="extrabold", color="#1E293B")
     lbl_login_sub = ft.Text("Inicia sesión en tu bóveda en la nube", size=14, color="#64748B")
     campo_correo = ft.TextField(label="Correo electrónico", width=300, border_radius=10)
     campo_pass = ft.TextField(label="Contraseña", password=True, width=300, border_radius=10)
@@ -210,9 +209,9 @@ def main(page: ft.Page):
     lista_eliminar = ft.Column()
     lista_historial = ft.Column(spacing=10)
 
-    # ==========================================
-    # 🧠 LÓGICA DE DATOS EN LA NUBE
-    # ==========================================
+    from datetime import datetime
+    def obtener_fecha(): return datetime.now().strftime("%d/%m/%Y %I:%M %p")
+
     def cargar_datos():
         if not USER_ID[0]: return
         url = f"{DATABASE_URL}/users/{USER_ID[0]}/tareas.json?auth={USER_TOKEN[0]}"
@@ -223,19 +222,14 @@ def main(page: ft.Page):
                 tareas.clear()
                 if isinstance(data, list): tareas.extend([t for t in data if t is not None])
                 elif isinstance(data, dict): tareas.extend(list(data.values()))
-        except Exception as e: print("Error cargando la nube:", e)
+        except Exception as e: print("Error cargando:", e)
 
     def guardar_datos():
         if not USER_ID[0]: return
         url = f"{DATABASE_URL}/users/{USER_ID[0]}/tareas.json?auth={USER_TOKEN[0]}"
         try: requests.put(url, json=tareas)
-        except Exception as e: print("Error guardando en la nube:", e)
+        except Exception as e: print("Error guardando:", e)
 
-    def obtener_fecha(): return datetime.now().strftime("%d/%m/%Y %I:%M %p")
-
-    # ==========================================
-    # 🔄 FUNCIONES DE TAREAS Y NUBE
-    # ==========================================
     def finalizar_tarea(e):
         for t in tareas:
             if t["nombre"] == e.control.data and t.get("estado") == "pendiente":
@@ -264,7 +258,6 @@ def main(page: ft.Page):
         val = dd_cuad_rest.value
         mapa_en_es = {"DO": "HACER", "SCHEDULE": "PLANIFICAR", "DELEGATE": "DELEGAR", "DELETE": "ELIMINAR"}
         nuevo_cuadrante = mapa_en_es.get(val, val)
-        
         for t in tareas:
             if t["nombre"] == tarea_a_restaurar[0] and t.get("estado") == "finalizada":
                 t["estado"] = "pendiente"
@@ -283,23 +276,25 @@ def main(page: ft.Page):
         is_urg = u in ["SÍ", "YES"]
         is_imp = i in ["SÍ", "YES"]
         c = "HACER" if is_urg and is_imp else "PLANIFICAR" if not is_urg and is_imp else "DELEGAR" if is_urg and not is_imp else "ELIMINAR"
-        
         tareas.append({"nombre": input_tarea.value, "rubro": input_rubro.value or "General", "cuadrante": c, "estado": "pendiente", "fecha_ingreso": obtener_fecha()})
         guardar_datos()
-        
         input_tarea.value = ""
         input_rubro.value = ""
-        
         panel_ingreso.visible = False
         actualizar_vistas()
 
-    # ==========================================
-    # 📄 GENERADORES DE PDF (PULIDOS Y LIMPIOS)
-    # ==========================================
     def pedir_ruta_guardado(nombre_por_defecto, titulo):
-        root = tk.Tk(); root.withdraw(); root.attributes('-topmost', True) 
-        ruta = filedialog.asksaveasfilename(defaultextension=".pdf", initialfile=nombre_por_defecto, title=titulo, filetypes=[("Archivos PDF", "*.pdf")])
-        root.destroy(); return ruta
+        # 🧠 INTELIGENCIA ADAPTATIVA
+        if ENTORNO_ESCRITORIO:
+            root = tk.Tk()
+            root.withdraw()
+            root.attributes('-topmost', True) 
+            ruta = filedialog.asksaveasfilename(defaultextension=".pdf", initialfile=nombre_por_defecto, title=titulo, filetypes=[("Archivos PDF", "*.pdf")])
+            root.destroy()
+            return ruta
+        else:
+            # En la web, el archivo se guarda temporalmente en la raíz para enviarlo al navegador
+            return nombre_por_defecto
 
     def generar_pdf_matriz(e):
         if not PDF_DISPONIBLE: return
@@ -309,10 +304,8 @@ def main(page: ft.Page):
             pdf = PDFFirmado() 
             pdf.add_page()
             pdf.set_font("Arial", 'B', 16)
-            
             titulo_limpio = limpiar_texto(f"{t_lang['appbar']} - {t_lang['tab_m']}")
             pdf.cell(0, 10, titulo_limpio, ln=True, align="C")
-            
             pdf.set_font("Arial", 'I', 10)
             fecha_limpia = limpiar_texto(f"{t_lang['gen_date']} {obtener_fecha()}")
             pdf.cell(0, 10, fecha_limpia, ln=True, align="C")
@@ -331,17 +324,19 @@ def main(page: ft.Page):
                     c_text = cuad if LANG[0] == "ES" else q_map_en.get(cuad, cuad)
                     pdf.set_font("Arial", 'B', 12)
                     pdf.set_fill_color(230, 230, 230)
-                    
-                    # Corrección: Eliminado "CUADRANTE:"
                     pdf.cell(0, 8, limpiar_texto(f"  {c_text}  "), ln=True, fill=True)
-                    
                     pdf.set_font("Arial", '', 10)
                     for t in lista:
                         texto = f"   - [{t.get('rubro', 'General')}] {t['nombre']} | {t_lang['creacion']} {t.get('fecha_ingreso', 'N/A')}"
                         pdf.cell(0, 8, limpiar_texto(texto), ln=True)
                     pdf.ln(5)
             pdf.output(ruta_elegida) 
-            page.snack_bar = ft.SnackBar(ft.Text("¡PDF guardado con éxito! 📄", color="white"), bgcolor="#4CAF50")
+            
+            # MAGIA EN LA NUBE: Si estamos en celular, abrimos el PDF para descargarlo
+            if not ENTORNO_ESCRITORIO:
+                page.launch_url(f"/{ruta_elegida}")
+                
+            page.snack_bar = ft.SnackBar(ft.Text("¡PDF procesado con éxito! 📄", color="white"), bgcolor="#4CAF50")
             page.snack_bar.open = True
             page.update()
 
@@ -353,10 +348,8 @@ def main(page: ft.Page):
             pdf = PDFFirmado() 
             pdf.add_page()
             pdf.set_font("Arial", 'B', 16)
-            
             titulo_limpio = limpiar_texto(f"{t_lang['appbar']} - {t_lang['tab_h']}")
             pdf.cell(0, 10, titulo_limpio, ln=True, align="C")
-            
             pdf.set_font("Arial", 'I', 10)
             fecha_limpia = limpiar_texto(f"{t_lang['gen_date']} {obtener_fecha()}")
             pdf.cell(0, 10, fecha_limpia, ln=True, align="C")
@@ -375,26 +368,24 @@ def main(page: ft.Page):
                     c_text = cuad if LANG[0] == "ES" else q_map_en.get(cuad, cuad)
                     pdf.set_font("Arial", 'B', 12)
                     pdf.set_fill_color(230, 230, 230)
-                    
-                    # Corrección: Eliminado "ORIGEN:"
                     pdf.cell(0, 8, limpiar_texto(f"  {c_text}  "), ln=True, fill=True)
-                    
                     pdf.set_font("Arial", '', 10)
                     for t in lista:
                         texto = f"   - [{t.get('rubro', 'General')}] {t['nombre']} | {t_lang['creacion']} {t.get('fecha_ingreso', 'N/A')} | {t_lang['fin']} {t.get('fecha_fin', '')}"
                         pdf.cell(0, 8, limpiar_texto(texto), ln=True)
                     pdf.ln(5)
             pdf.output(ruta_elegida)
-            page.snack_bar = ft.SnackBar(ft.Text("¡PDF guardado con éxito! 📄", color="white"), bgcolor="#4CAF50")
+            
+            if not ENTORNO_ESCRITORIO:
+                page.launch_url(f"/{ruta_elegida}")
+                
+            page.snack_bar = ft.SnackBar(ft.Text("¡PDF procesado con éxito! 📄", color="white"), bgcolor="#4CAF50")
             page.snack_bar.open = True
             page.update()
 
     btn_pdf_m.on_click = generar_pdf_matriz
     btn_pdf_h.on_click = generar_pdf_historial
 
-    # ==========================================
-    # 🌍 APLICADOR DEL TRADUCTOR BILINGÜE
-    # ==========================================
     def aplicar_idioma():
         try:
             t = TXT[LANG[0]]
@@ -406,20 +397,15 @@ def main(page: ft.Page):
             btn_olvide.text = t["olvide"]
             btn_login.text = t["entrar"]
             btn_crear.text = t["crear_acc"]
-            
             txt_tab_matriz.value = t["tab_m"]
             txt_tab_hist.value = t["tab_h"]
-            
-            # TRADUCCIÓN ACTIVA PARA BOTONES
             btn_pdf_m.text = t["pdf_m"]
             btn_pdf_h.text = t["pdf_h"]
             btn_nueva_tarea.text = t["new_task_btn"]
-            
             txt_q1.value = t["q1"]
             txt_q2.value = t["q2"]
             txt_q3.value = t["q3"]
             txt_q4.value = t["q4"]
-            
             lbl_form_title.value = t["form_title"]
             input_tarea.label = t["lbl_tarea"]
             input_rubro.label = t["lbl_rubro"]
@@ -427,18 +413,15 @@ def main(page: ft.Page):
             dd_importante.label = t["lbl_imp"]
             btn_cancelar.text = t["cancel"]
             btn_guardar.text = t["save"]
-            
             lbl_rest_title.value = t["rest_title"]
             lbl_rest_sub.value = t["rest_sub"]
             btn_rest_cancel.text = t["cancel"]
             btn_rest_confirm.text = t["rest_btn"]
-            
             lbl_rec_title.value = t["rec_title"]
             lbl_rec_sub.value = t["rec_sub"]
             recup_correo.label = t["correo"]
             btn_rec_enviar.text = t["send_link"]
             btn_rec_volver.text = t["back"]
-            
             lbl_reg_title.value = t["reg_title"]
             lbl_reg_sub.value = t["reg_sub"]
             reg_correo.label = t["correo"]
@@ -458,9 +441,7 @@ def main(page: ft.Page):
                 dd_cuad_rest.options = [ft.dropdown.Option("HACER"), ft.dropdown.Option("PLANIFICAR"), ft.dropdown.Option("DELEGAR"), ft.dropdown.Option("ELIMINAR")]
                 if dd_urgente.value == "YES": dd_urgente.value = "SÍ"
                 if dd_importante.value == "YES": dd_importante.value = "SÍ"
-        except Exception as e:
-            pass
-
+        except Exception as e: pass
         actualizar_vistas()
         page.update()
 
@@ -470,9 +451,6 @@ def main(page: ft.Page):
         
     btn_lang.on_click = toggle_lang
 
-    # ==========================================
-    # 🎨 ENSAMBLAJE DE LA INTERFAZ
-    # ==========================================
     def crear_tarjeta_dinamica(txt_control, color_fondo, contenedor):
         return ft.Container(
             content=ft.Column([txt_control, ft.Divider(color="#FFFFFF", opacity=0.3), contenedor]),
@@ -496,7 +474,7 @@ def main(page: ft.Page):
             item = ft.Container(
                 content=ft.Row([
                     ft.TextButton("✔️", data=t["nombre"], on_click=finalizar_tarea, style=ft.ButtonStyle(color="#FFFFFF")),
-                    ft.Text(value=f"[{t.get('rubro', 'General')}] {t['nombre']}", color="#FFFFFF", size=14, weight="w500", expand=True)
+                    ft.Text(f"[{t.get('rubro', 'General')}] {t['nombre']}", color="#FFFFFF", size=14, weight="w500", expand=True)
                 ]), padding=2
             )
             q = t.get("cuadrante", "")
@@ -506,7 +484,7 @@ def main(page: ft.Page):
             elif q == "ELIMINAR": lista_eliminar.controls.append(item)
 
         for lista in [lista_hacer, lista_planificar, lista_delegar, lista_eliminar]:
-            if not lista.controls: lista.controls.append(ft.Text(value=t_lang["empty"], color="#FFFFFF", opacity=0.7))
+            if not lista.controls: lista.controls.append(ft.Text(t_lang["empty"], color="#FFFFFF", opacity=0.7))
 
         for t in reversed(finalizadas):
             c_text = t['cuadrante'] if LANG[0] == "ES" else q_map_en.get(t['cuadrante'], t['cuadrante'])
@@ -514,8 +492,8 @@ def main(page: ft.Page):
                 content=ft.Row([
                     ft.Text("✅", size=18),
                     ft.Column([
-                        ft.Text(value=t["nombre"], weight="bold", size=14),
-                        ft.Text(value=f"{c_text} | {t_lang['fin']} {t.get('fecha_fin', '')}", size=11, color="#64748B")
+                        ft.Text(t["nombre"], weight="bold", size=14),
+                        ft.Text(f"{c_text} | {t_lang['fin']} {t.get('fecha_fin', '')}", size=11, color="#64748B")
                     ], expand=True), 
                     ft.TextButton("♻️", data=t["nombre"], on_click=abrir_panel_restaurar),
                     ft.TextButton("🗑️", data=t["nombre"], on_click=eliminar_tarea_definitiva)
@@ -523,7 +501,7 @@ def main(page: ft.Page):
             )
             lista_historial.controls.append(item_historial)
             
-        if not lista_historial.controls: lista_historial.controls.append(ft.Text(value=t_lang["empty_h"], color="#64748B"))
+        if not lista_historial.controls: lista_historial.controls.append(ft.Text(t_lang["empty_h"], color="#64748B"))
         page.update()
 
     def ocultar_panel(e=None):
@@ -555,21 +533,8 @@ def main(page: ft.Page):
     row_botones_matriz = ft.Row([btn_nueva_tarea, btn_pdf_m], alignment=ft.MainAxisAlignment.END)
     row_botones_historial = ft.Row([btn_pdf_h], alignment=ft.MainAxisAlignment.END)
 
-    vista_matriz = ft.Column([
-        row_botones_matriz, 
-        panel_ingreso, 
-        tarjeta_hacer, 
-        tarjeta_planificar, 
-        tarjeta_delegar, 
-        tarjeta_eliminar
-    ], spacing=15, visible=True)
-    
-    vista_historial = ft.Column([
-        row_botones_historial, 
-        panel_restaurar, 
-        ft.Divider(), 
-        lista_historial
-    ], spacing=15, visible=False)
+    vista_matriz = ft.Column([row_botones_matriz, panel_ingreso, tarjeta_hacer, tarjeta_planificar, tarjeta_delegar, tarjeta_eliminar], spacing=15, visible=True)
+    vista_historial = ft.Column([row_botones_historial, panel_restaurar, ft.Divider(), lista_historial], spacing=15, visible=False)
 
     def click_matriz(e): vista_matriz.visible, vista_historial.visible, btn_matriz.bgcolor, btn_historial.bgcolor = True, False, "#E2E8F0", "#FFFFFF"; page.update()
     def click_historial(e): vista_matriz.visible, vista_historial.visible, btn_matriz.bgcolor, btn_historial.bgcolor = False, True, "#FFFFFF", "#E2E8F0"; page.update()
@@ -587,9 +552,6 @@ def main(page: ft.Page):
     
     contenedor_app = ft.Container(content=ft.Column([ft.Row([btn_matriz, btn_historial], alignment=ft.MainAxisAlignment.CENTER), ft.Divider(color="transparent", height=5), vista_matriz, vista_historial]), padding=20, visible=False)
 
-    # ==========================================
-    # 🔒 SISTEMA DE NAVEGACIÓN Y FIREBASE
-    # ==========================================
     def mostrar_pantalla_registro(e): contenedor_login.visible, contenedor_recuperar.visible, contenedor_registro.visible = False, False, True; page.update()
     def mostrar_pantalla_recuperar(e): contenedor_login.visible, contenedor_registro.visible, contenedor_recuperar.visible = False, False, True; page.update()
     def volver_al_login(e=None):
@@ -608,11 +570,11 @@ def main(page: ft.Page):
         payload = {"email": reg_correo.value, "password": reg_pass.value, "returnSecureToken": True}
         try:
             res = requests.post(url, json=payload); data = res.json()
-            if "error" in data: page.snack_bar = ft.SnackBar(ft.Text(value=f"⚠️ Error: {data['error']['message']}", color="white"), bgcolor="#E53935")
+            if "error" in data: page.snack_bar = ft.SnackBar(ft.Text(f"⚠️ Error: {data['error']['message']}", color="white"), bgcolor="#E53935")
             else:
-                page.snack_bar = ft.SnackBar(ft.Text(value="✅ Cuenta creada en la nube.", color="white"), bgcolor="#4CAF50")
+                page.snack_bar = ft.SnackBar(ft.Text("✅ Cuenta creada en la nube.", color="white"), bgcolor="#4CAF50")
                 volver_al_login()
-        except: page.snack_bar = ft.SnackBar(ft.Text(value="⚠️ Error de conexión a Firebase.", color="white"), bgcolor="#E53935")
+        except: page.snack_bar = ft.SnackBar(ft.Text("⚠️ Error de conexión a Firebase.", color="white"), bgcolor="#E53935")
         page.snack_bar.open = True; page.update()
     
     btn_reg_confirm.on_click = registrar_usuario
@@ -623,11 +585,11 @@ def main(page: ft.Page):
         payload = {"requestType": "PASSWORD_RESET", "email": recup_correo.value}
         try:
             res = requests.post(url, json=payload); data = res.json()
-            if "error" in data: page.snack_bar = ft.SnackBar(ft.Text(value="⚠️ Error verificando correo.", color="white"), bgcolor="#E53935")
+            if "error" in data: page.snack_bar = ft.SnackBar(ft.Text("⚠️ Error verificando correo.", color="white"), bgcolor="#E53935")
             else:
-                page.snack_bar = ft.SnackBar(ft.Text(value="📧 ¡Enlace enviado! (Revisa tu carpeta de Spam).", color="white"), bgcolor="#4CAF50")
+                page.snack_bar = ft.SnackBar(ft.Text("📧 ¡Enlace enviado! (Revisa tu carpeta de Spam).", color="white"), bgcolor="#4CAF50")
                 volver_al_login()
-        except: page.snack_bar = ft.SnackBar(ft.Text(value="⚠️ Error de conexión a Firebase.", color="white"), bgcolor="#E53935")
+        except: page.snack_bar = ft.SnackBar(ft.Text("⚠️ Error de conexión a Firebase.", color="white"), bgcolor="#E53935")
         page.snack_bar.open = True; page.update()
     
     btn_rec_enviar.on_click = enviar_recuperacion
@@ -637,15 +599,15 @@ def main(page: ft.Page):
         payload = {"email": campo_correo.value, "password": campo_pass.value, "returnSecureToken": True}
         try:
             res = requests.post(url, json=payload); data = res.json()
-            if "error" in data: page.snack_bar = ft.SnackBar(ft.Text(value="⚠️ Credenciales incorrectas.", color="white"), bgcolor="#E53935")
+            if "error" in data: page.snack_bar = ft.SnackBar(ft.Text("⚠️ Credenciales incorrectas.", color="white"), bgcolor="#E53935")
             else:
                 USER_TOKEN[0], USER_ID[0] = data["idToken"], data["localId"]
                 cargar_datos()
                 contenedor_login.visible, contenedor_app.visible = False, True
                 page.appbar = appbar_principal
-                page.snack_bar = ft.SnackBar(ft.Text(value="¡Conectado a la Nube! ☁️⚡", color="white"), bgcolor="#4CAF50")
+                page.snack_bar = ft.SnackBar(ft.Text("¡Conectado a la Nube! ☁️⚡", color="white"), bgcolor="#4CAF50")
                 actualizar_vistas()
-        except: page.snack_bar = ft.SnackBar(ft.Text(value="⚠️ Error de conexión.", color="white"), bgcolor="#E53935")
+        except: page.snack_bar = ft.SnackBar(ft.Text("⚠️ Error de conexión.", color="white"), bgcolor="#E53935")
         page.snack_bar.open = True; page.update()
 
     btn_login.on_click = iniciar_sesion
@@ -659,4 +621,5 @@ def main(page: ft.Page):
     aplicar_idioma()
     page.add(contenedor_login, contenedor_registro, contenedor_recuperar, contenedor_app)
 
+# ALERTA DE NUBE: assets_dir="." permite que el servidor web entregue los PDFs al navegador
 ft.app(target=main, assets_dir=".")
