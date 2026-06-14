@@ -27,7 +27,7 @@ jobs:
           pip install -r requirements.txt
           
       - name: Build APK with Flet
-        run: flet build apk --project EAppRogelio
+        run: flet build apk --project EAppRogelio --yes
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
