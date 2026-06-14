@@ -1,0 +1,52 @@
+name: Build macOS DMG
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build macOS App & DMG
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Install dependencies
+        run: |
+          pip install flet
+          pip install -r requirements.txt
+          
+      - name: Build macOS App
+        run: flet build macos --project EAppRogelio --yes
+
+      - name: Install create-dmg
+        run: brew install create-dmg
+
+      - name: Create DMG
+        run: |
+          create-dmg \
+            --volname "EApp Rogelio" \
+            --window-pos 200 120 \
+            --window-size 600 400 \
+            --icon-size 100 \
+            --icon "EAppRogelio.app" 175 120 \
+            --hide-extension "EAppRogelio.app" \
+            --app-drop-link 425 120 \
+            "build/macos/EApp-Rogelio.dmg" \
+            "build/macos/EAppRogelio.app"
+
+      - name: Upload DMG Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: EApp-Rogelio-Mac
+          path: build/macos/EApp-Rogelio.dmg
